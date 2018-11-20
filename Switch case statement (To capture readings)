@@ -1,57 +1,56 @@
-  #include <iostream>
-  using namespace std;
-  
-  int switch_count1 = 0;
-  const int amountOfReadings = 5;
-  // Arrays of doubles to store xyz acceleration readings of a certain loop
-  double firstReading[3] = {0.0, 0.0, 0.0};
-  double secondReading[3] = {0.0, 0.0, 0.0};
-  double thirdReading[3] = {0.0, 0.0, 0.0};
-  double fourthReading[3] = {0.0, 0.0, 0.0};
-  double fifthReading[3] = {0.0, 0.0, 0.0};
-  
-  if (switch_count1 < amountOfReadings){
-   switch (switch_count1){
+const int amountOfReadings = 5;
+
+// Arrays of doubles to store xyz acceleration readings of a certain loop
+int switch_count1 = 0;
+double firstReading[3] = {0.0, 0.0, 0.0};
+double secondReading[3] = {0.0, 0.0, 0.0};
+double thirdReading[3] = {0.0, 0.0, 0.0};
+double fourthReading[3] = {0.0, 0.0, 0.0};
+double fifthReading[3] = {0.0, 0.0, 0.0};
+
+// Modify amountOfReadings and the case values to change the interval of readings
+if (switch_count1 < amountOfReadings){
+  switch (switch_count1){
     case 0: firstReading[0] = accelerometer.x(), firstReading[1] = accelerometer.y(), firstReading[2] = accelerometer.z()
-     break;
+       break;
     case 1: secondReading[0] = accelerometer.x(), secondReading[1] = accelerometer.y(), secondReading[2] = accelerometer.z()
-     break;
+       break;
     case 2: thirdReading[0] = accelerometer.x(), thirdReading[1] = accelerometer.y(), thirdReading[2] = accelerometer.z()
-     break;
+       break;
     case 3: fourthReading[0] = accelerometer.x(), fourthReading[1] = accelerometer.y(), fourthReading[2] = accelerometer.z()
-     break;
+       break;
     case 4: fifthReading[0] = accelerometer.x(), fifthReading[1] = accelerometer.y(), fifthReading[2] = accelerometer.z()
-     break;
+       break;
     default:
-     break;
+       break;
     }
-    switch_count1++;
-    if (switch_count1 == amountofReadings) {
-      switch_count1 = 0;
-    }
+  switch_count1++;
+  if (switch_count1 == amountofReadings) {
+    switch_count1 = 0;
   }
+}
   
-  int switch_count2 = 0;
-  double firstReadingGyro[3] = {0.0, 0.0, 0.0};
-  double secondReadingGyro[3] = {0.0, 0.0, 0.0};
-  double thirdReadingGyro[3] = {0.0, 0.0, 0.0};
-  double fourthReadingGyro[3] = {0.0, 0.0, 0.0};
-  double fifthReadingGyro[3] = {0.0, 0.0, 0.0};
+int switch_count2 = 0;
+double firstReadingGyro[3] = {0.0, 0.0, 0.0};
+double secondReadingGyro[3] = {0.0, 0.0, 0.0};
+double thirdReadingGyro[3] = {0.0, 0.0, 0.0};
+double fourthReadingGyro[3] = {0.0, 0.0, 0.0};
+double fifthReadingGyro[3] = {0.0, 0.0, 0.0};
   
 if (switch_count2 < amountOfReadings){
-   switch (switch_count1){
+  switch (switch_count1){
     case 0: firstReadingGyro[0] = gyroscope.x(), firstReadingGyro[1] = gyroscope.y(), firstReadingGyro[2] = gyroscope.z()
-     break;
+      break;
     case 1: secondReadingGyro[0] = gyroscope.x(), secondReadingGyro[1] = gyroscope.y(), secondReadingGyro[2] = gyroscope.z()
-     break;
+      break;
     case 2: thirdReadingGyro[0] = gyroscope.x(), thirdReadingGyro[1] = gyroscope.y(), thirdReadingGyro[2] = gyroscope.z()
-     break;
+      break;
     case 3: fourthReadingGyro[0] = gyroscope.x(), fourthReadingGyro[1] = gyroscope.y(), fourthReadingGyro[2] = gyroscope.z()
-     break;
+      break;
     case 4: fifthReadingGyro[0] = gyroscope.x(), fifthReadingGyro[1] = gyroscope.y(), fifthReadingGyro[2] = gyroscope.z()
-     break;
+      break;
     default:
-     break;
+      break;
   } 
   switch_count2++;
   if (switch_count2 == amountOfReadings) {
