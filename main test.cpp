@@ -15,6 +15,7 @@ int main()
   double threshholdXGyro = 0.0;
   double threshholdYGyro = 0.0;
   double threshholdZGyro = 0.0;
+  // bool statements to pass if true
   bool potentialfall = false;
   bool fallXGyro = false;
   bool fallYGyro = false;
@@ -24,8 +25,9 @@ int main()
   if (sqrt((xAccel^2)+(yAccel^2)+(zAccel^2)) >threshholdNetAccel)
   {
     potentialfall = true;
-    if (potentialfall) { // if statement only works if potential fall is true
-      //Test Gyro
+    Serial.print("The user MIGHT have fallen\n")
+    if (potentialfall) { // if there is a potential fall, test for Gyro values
+      //xGyro being tested
       if (xGyro > threshholdXGyro) {
         fallXGyro = true;
       }
@@ -35,14 +37,21 @@ int main()
       if (zGyro > threshholdZGyro) {
         fallZGyro = true;
       }
-      if (fallXGyro && fallYGyro && fallZGyro) {
-        //Buzzer activates
+      
+      if (fallXGyro && fallYGyro && fallZGyro) { // If all XYZ Gyro readings have exceeded the threshhold value, activate Buzzer
+        // Buzzer activates
+        Serial.print("The User Has Fallen\n")
       }
-      //Prints 1 if it has exceeded the Threshhold (For Testing Values)
+      // Prints 1 if it has exceeded the Threshhold (For Testing Values)
       Serial.print(fallXGyro);
       Serial.print(fallYGyro);
       Serial.print(fallZGyro);
+      // Could add if statements to test if the user is running/sitting down/etc. if wanted (probably wouldn't need it)
     }
+    potentialfall = false;
+    fallXGyro = false;
+    fallYGyro = false;
+    fallZGyro = false;
   }
   
 }
