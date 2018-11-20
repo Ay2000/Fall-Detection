@@ -1,0 +1,55 @@
+//May need some slight changes since this is in c++, but I'm pretty sure the vectorSum function should work with our program in arduino
+//Whether or not the values passed to the function are negative shouldn't matter if we are just looking the magnitude of the sum
+
+//This is just here because I was working in visual studio
+/*
+#include <iostream>
+#include <iomanip>
+#include <cmath>
+
+using namespace std;
+*/
+
+//Declaration of the Vector Sum function
+double vectorSum(double Xvector, double Yvector, double Zvector);
+
+//The main function is just there to test the results since I was working in visual studio
+/*
+int main() {
+	double x = 0;
+	double y = 0;
+	double z = 0;
+
+	cout << "Enter x value ";
+	cin >> x;
+	cout << endl << "Enter y value ";
+	cin >> y;
+	cout << endl << "Enter z value ";
+	cin >> z;
+
+	cout << endl << endl << "The vector sum is " << vectorSum(x, y, z);
+
+	return 0;
+}
+*/
+
+//This is the function that would be called whenever we need the sum of the three vectors
+//We may need to include some arduino math library for the sqrt() function
+double vectorSum(double Xvector, double Yvector, double Zvector) {
+
+	double sumRoot = 0;
+	double sum = 0;
+	double xsquared = 0;
+	double ysquared = 0;
+	double zsquared = 0;
+
+	xsquared = Xvector * Xvector;
+	ysquared = Yvector * Yvector;
+	zsquared = Zvector * Zvector;
+
+	sum = xsquared + ysquared + zsquared;
+	sumRoot = sqrt(sum);
+
+	return sumRoot;
+
+}
