@@ -1,0 +1,22 @@
+  //thresh_hold1 has to be squared
+const float thresh_hold1 = 0.0;
+const float thresh_hold2 = 0.0;
+
+void loop() 
+{
+  sensors_event_t event;
+  bno.getEvent(&event);
+
+  imu::Vector<3> accelerometer = bno.getVector(Adafruit_BNO055::VECTOR_ACCELEROMETER);
+  imu::Vector<3> gyroscope = bno.getVector(Adafruit_BNO055::VECTOR_GYROSCOPE);
+
+  float total_acceleration = 0;
+  
+  //Note that total acceleration is squared so therfore thresh_hold1 has to be squared
+  total_acceleration = (accelerometer.x()*accelerometer.x())+(accelerometer.y()*accelerometer.y())+(accelerometer.z()*accelerometer.z());
+  if (total_acceleration > thresh_hold1)
+  {
+    Serial.print("It went over the threshold bich"); 
+  }
+ 
+}
