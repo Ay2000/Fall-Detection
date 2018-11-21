@@ -5,3 +5,47 @@
 #include <EEPROM.h>
 #include <Arduino.h>
 
+// Function Prototype fr extraction and usage of raw data
+void process (double, double);
+
+// Extraction function declaration
+void process (double rawAccSquared, double rawGyrSquared)
+{
+  if ( rawGyrSquared > 3.2 )
+  {
+    // buzz
+  }
+}
+
+// in m/s squared
+const double thresholdAcc = 16.0;
+// right now outputting in radians per second, should change to degree
+const double thresholdGyr = 3.2;
+int counter = 0;
+
+void loop() 
+{
+  displaydata();
+  thresholdAcc();
+  delay(BNO055_SAMPLERATE_DELAY_MS);
+
+  // Storing set of accelerometer values in array and sending into extractionArray
+  
+  imu::Vector<3> accelerometer = bno.getVector(Adafruit_BNO055::VECTOR_ACCELEROMETER);
+  imu::Vector<3> gyroscope = bno.getVector(Adafruit_BNO055::VECTOR_GYROSCOPE);
+  double squaredAccValue = (accelerometer.x * accelerometer.x + accelerometer.y * accelerometer.y + accelerometer.z * accelerometer.z);
+  double squaredGyrValue = (gyroscope.x * gyroscope.x + gyroscope.y * gyroscope.y);
+  
+// if acc threshold value is attained over 0.5 second, send in squared gyroscope and accelerometer value to process
+  if ( squaredAccValue > thresholdAcc )
+  {
+    counter++;
+    if ( counter > 5 )
+    {
+      process ( squaredAccValue, squaredGyrValue );
+    }
+  }
+  
+
+  
+}
