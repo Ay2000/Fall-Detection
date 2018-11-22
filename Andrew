@@ -1,0 +1,174 @@
+  int i = 0;
+  int j = 0;
+  int k = 0;
+  int l = 0;
+
+  double accel_array[5] = {'\0'};
+  double accel_average = 0.0;
+  double gyro_array[5] = {'\0'};
+  double gyro_average = 0.0;
+  double accel_threshold = 0.0; //These values can be assigned later
+  double gyro_threshold = 0.0; //These values can be assigned later
+
+void loop() 
+{
+  double accelx = 0.0;
+  double accely = 0.0;
+  double accelz = 0.0;
+
+  double gyrox = 0.0;
+  double gyroy = 0.0;
+  double gyroz = 0.0;
+
+  bool potential_fall = false;
+  
+  double accel_before = 0.0;
+  double accel_after = 0.0;
+  double gyro_before = 0.0;
+  double gyro_after = 0.0;
+  
+  sensors_event_t event;
+  bno.getEvent(&event);
+
+  //Taking input values from the accelerometer and the gyroscope
+  imu::Vector<3> accelerometer = bno.getVector(Adafruit_BNO055::VECTOR_ACCELEROMETER);
+  imu::Vector<3> gyroscope = bno.getVector(Adafruit_BNO055::VECTOR_GYROSCOPE);
+
+  //Assigning every data of acceleration xyz and angular velocity xyz into these 6 variables.
+  accelx = accelerometer.x();
+  accely = accelerometer.y();
+  accelz = accelerometer.z();
+  gyrox = gyroscope.x();
+  gyroy = gyroscope.y();
+  gyroz = gyroscope.z();
+  
+  //Function displaydata displays the data collected.
+  displaydata(accelx, accely, accelz, gyrox, gyroy, gyroz);
+  Serial.println("");
+
+  //Taking accelerometer average out of 5 datas.
+  if (i < 5)
+  {
+    accel_array[i] = accel_sum(accelx, accely, accelz);
+    i++; 
+  }
+  else
+  {
+   accel_average = ( accel_array[0] + accel_array[1] + accel_array[2] + accel_array[3] + accel_array[4])/5;
+   accel_array[0] = accel_array[1];
+   accel_array[1] = accel_array[2];
+   accel_array[2] = accel_array[3];
+   accel_array[3] = accel_array[4];
+   accel_array[4] = 0;
+   i = 4;
+  }
+  //Taking gyroscope average out of 5 datas.
+  if (j < 5)
+  {
+    accel_array[j] = gyro_sum(gyrox, gyroy, gyroz);
+    j++; 
+  }
+  else
+  {
+   gyro_average = ( gyro_array[0] + gyro_array[1] + gyro_array[2] + gyro_array[3] + gyro_array[4])/5;
+   gyro_array[0] = gyro_array[1];
+   gyro_array[1] = gyro_array[2];
+   gyro_array[2] = gyro_array[3];
+   gyro_array[3] = gyro_array[4];
+   gyro_array[4] = 0;
+   j = 4;
+  }
+  
+  if (accel_average > accel_threshold)
+  {
+    Serial.println("The acceleration was over the threshold");
+    Serial.println("");
+    if (gyro_average > gyro_threshold)
+    {
+      Serial.println("The angular velocity was over the threshold");
+      Serial.println("");
+      potential_fall = true;
+    }  
+  }
+
+  while (potential_fall == true)
+  {
+   if ( l < 2)
+   {
+     imu::Vector<3> accelerometer = bno.getVector(Adafruit_BNO055::VECTOR_ACCELEROMETER);
+     imu::Vector<3> gyroscope = bno.getVector(Adafruit_BNO055::VECTOR_GYROSCOPE);
+    
+     accelx = accelerometer.x();
+     accely = accelerometer.y();
+     accelz = accelerometer.z();
+
+     gyrox = gyroscope.x();
+     gyroy = gyroscope.y();
+     gyroz = gyroscope.z();
+
+     accel_before = accel_sum(accelx, accely, accelz);
+     gyro_before = gyro_sum(gyrox, gyroy, gyroz);
+     l++;
+   }
+   else
+   {
+     delay(10000);
+     imu::Vector<3> accelerometer = bno.getVector(Adafruit_BNO055::VECTOR_ACCELEROMETER);
+     imu::Vector<3> gyroscope = bno.getVector(Adafruit_BNO055::VECTOR_GYROSCOPE);
+    
+     accelx = accelerometer.x();
+     accely = accelerometer.y();
+     accelz = accelerometer.z();
+
+     gyrox = gyroscope.x();
+     gyroy = gyroscope.y();
+     gyroz = gyroscope.z();
+
+     accel_after = accel_sum(accelx, accely, accelz);
+     gyro_after = gyro_sum(gyrox, gyroy, gyroz);
+   }
+
+   if((accel_before - 1) == accel_after || (accel_before + 1) == accel_after && k < 3)
+   {
+      tone(buzzerPin, 100, 2000);
+      k++;
+      continue;
+   }
+   else
+   {
+    k = 0;
+    potential_fall = false;
+    break;
+   }
+  }
+}
+
+double accel_sum(double accelx, double accely, double accelz)
+{
+  double xsquared = 0.0;
+  double ysquared = 0.0;
+  double zsquared = 0.0;
+  double accel_total = 0.0;
+
+  xsquared = accelx * accelx;
+  ysquared = accely * accely;
+  zsquared = accelz * accelz;
+  accel_total = xsquared + ysquared + zsquared;
+  //Note accel_total is squared
+  return accel_total;
+}
+
+double gyro_sum(double gyrox, double gyroy, double gyroz)
+{
+  double xsquared = 0.0;
+  double ysquared = 0.0;
+  double zsquared = 0.0;
+  double gyro_total = 0.0;
+
+  xsquared = gyrox * gyrox;
+  ysquared = gyroy * gyroy;
+  zsquared = gyroz * gyroz;
+  gyro_total = xsquared + ysquared + zsquared;
+  //Note accel_total is squared
+  return gyro_total;
+}
