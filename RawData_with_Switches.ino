@@ -1,13 +1,10 @@
 /*
-
-3 Button and Buzzer Arduino Test Driver
+Fall Detection Device
+Compares linear acceleration and angular velocity to their respective thresholds to determine if the user has fallen
 
 Daniel Carleton
 Created: 18 November, 2018
-Last Updated: 20 November, 2018
- 
-LED
- * LED attached internally from pin13 to ground.
+Last Updated: 23 November, 2018
 
 Button 1
  * button1 connected to +5V.
@@ -30,14 +27,24 @@ The Reset Pin
 
 Build of Materials
  * Arduino
- * 2 10K Ohm Resistors
+ * 2 Push buttons
+ * 1 10K Ohm Resistors
  * 1 100 Ohm Resistor
  * 2 Push Buttons
  * 1 Piezzo Buzzer (<5V)
  * Reset Pin (Built Into Arduino)
- * LED (Built into pin13 on Arduino)
+ * Adafruit BNO055 IMU
+ * Power bank with USB to power Device
 
 */
+
+  // Possible vector values can be:
+  // - VECTOR_ACCELEROMETER - m/s^2
+  // - VECTOR_MAGNETOMETER  - uT
+  // - VECTOR_GYROSCOPE     - rad/s
+  // - VECTOR_EULER         - degrees
+  // - VECTOR_LINEARACCEL   - m/s^2
+  // - VECTOR_GRAVITY       - m/s^2
 
 #include <Wire.h>
 #include <Adafruit_Sensor.h>
@@ -47,32 +54,50 @@ Build of Materials
 #include <Arduino.h>
 
 // set constant pin numbers:
-const byte switchOnePin = 2;  // pin number to run program
 const byte interruptPin = 3;  // pin number to alert help
-const byte buzzerPin = 4;     // pin number for buzzer, maybe change to pin8 if it doesn't work
+const byte buzzerPin = 7;     // pin number for buzzer, maybe change to pin8 if it doesn't work
 
-// the follow variables are long's because the time, measured in milliseconds, will quickly become a bigger number than can be stored in an int.
-long time = 0;                // the last time the output pin was toggled
-long debounce = 200;          // the debounce time, increase if the output flicker
+// counter for arrays to keep track of entries
+unsigned long counter = 0; // offset to keep keep entires in correct slots
+ 
+#define TONE 1000 // 1000 is good, 100 is less annoying
 
-// Set the delay between fresh samples
-#define BNO055_SAMPLERATE_DELAY_MS (100)
+// Thresholds
+const float thresholdAccel = 14.0; //threshold for acceleration: m/s^2
+const float thresholdGyro = 100.0; //threshold for angular velocity: rad/s
+
+// arrays for 5 calculations of accelerometer magnitude and gyroscope magnitude
+double accelArray [6]; // n+2 size or i get errors
+double gyroArray [6];
+
+#define BNO055_SAMPLERATE_DELAY_MS (100) // Set the delay between fresh samples
 
 Adafruit_BNO055 bno = Adafruit_BNO055(55);
+
+//function prototypes
+void pin_ISR(); // buzzer interrupt function
+void displaySensorDetails(void); //display sensor information, sensor API sensor_t type (see Adafruit_Sensor for more information)
+void displaySensorStatus(void); //Display basic info about sensor status
+void displayCalStatus(void); //display calibration status
+void displaySensorOffsets(const adafruit_bno055_offsets_t &calibData); //displays raw calibration and radius data
+void displaydata(); //displays 3 axis vector readings for Gyroscope and Accelerometer
+double magnitudeAccel(); // displays magnitude of Acceleration
+double magnitudeGyro(); // displays magnitude of angular velocity
+double averageGyroReadings(); // average all 5 entries of the gyroArray
+double averageAccelReadings(); // average all 5 entries of the accelArray
 
 void displaySensorDetails(void) //display sensor information, sensor API sensor_t type (see Adafruit_Sensor for more information)
 {
     sensor_t sensor;
     bno.getSensor(&sensor);
-    Serial.println("------------------------------------");
-    Serial.print("Sensor:       "); Serial.println(sensor.name);
-    Serial.print("Driver Ver:   "); Serial.println(sensor.version);
-    Serial.print("Unique ID:    "); Serial.println(sensor.sensor_id);
-    Serial.print("Max Value:    "); Serial.print(sensor.max_value); Serial.println(" xxx");
-    Serial.print("Min Value:    "); Serial.print(sensor.min_value); Serial.println(" xxx");
-    Serial.print("Resolution:   "); Serial.print(sensor.resolution); Serial.println(" xxx");
-    Serial.println("------------------------------------");
-    Serial.println("");
+    Serial.print("------------------------------------\n");
+    Serial.print("Sensor:       "); Serial.print(sensor.name); Serial.print("\n");
+    Serial.print("Driver Ver:   "); Serial.print(sensor.version); Serial.print("\n");
+    Serial.print("Unique ID:    "); Serial.print(sensor.sensor_id); Serial.print("\n");
+    Serial.print("Max Value:    "); Serial.print(sensor.max_value); Serial.print(" xxx\n");
+    Serial.print("Min Value:    "); Serial.print(sensor.min_value); Serial.print(" xxx\n");
+    Serial.print("Resolution:   "); Serial.print(sensor.resolution); Serial.print(" xxx\n");
+    Serial.print("------------------------------------\n\n");
     delay(500);
 }
 
@@ -84,14 +109,13 @@ void displaySensorStatus(void) //Display basic info about sensor status
     bno.getSystemStatus(&system_status, &self_test_results, &system_error);
 
     /* Display the results in the Serial Monitor */
-    Serial.println("");
+    Serial.print("\n");
     Serial.print("System Status: 0x");
-    Serial.println(system_status, HEX);
+    Serial.print(system_status, HEX); Serial.print("\n");
     Serial.print("Self Test:     0x");
-    Serial.println(self_test_results, HEX);
+    Serial.print(self_test_results, HEX); Serial.print("\n");
     Serial.print("System Error:  0x");
-    Serial.println(system_error, HEX);
-    Serial.println("");
+    Serial.print(system_error, HEX); Serial.print("\n");
     delay(500);
 }
 
@@ -125,19 +149,19 @@ void displayCalStatus(void) //display calibration status
 void displaySensorOffsets(const adafruit_bno055_offsets_t &calibData) //displays raw calibration and radius data
 {
     Serial.print("Accelerometer: ");
-    Serial.print(calibData.accel_offset_x); Serial.print(" ");
-    Serial.print(calibData.accel_offset_y); Serial.print(" ");
-    Serial.print(calibData.accel_offset_z); Serial.print(" ");
+    Serial.print(calibData.accel_offset_x); 
+    Serial.print(calibData.accel_offset_y); 
+    Serial.print(calibData.accel_offset_z); 
 
     Serial.print("\nGyro: ");
-    Serial.print(calibData.gyro_offset_x); Serial.print(" ");
-    Serial.print(calibData.gyro_offset_y); Serial.print(" ");
-    Serial.print(calibData.gyro_offset_z); Serial.print(" ");
+    Serial.print(calibData.gyro_offset_x); 
+    Serial.print(calibData.gyro_offset_y); 
+    Serial.print(calibData.gyro_offset_z); 
 
     Serial.print("\nMag: ");
-    Serial.print(calibData.mag_offset_x); Serial.print(" ");
-    Serial.print(calibData.mag_offset_y); Serial.print(" ");
-    Serial.print(calibData.mag_offset_z); Serial.print(" ");
+    Serial.print(calibData.mag_offset_x); 
+    Serial.print(calibData.mag_offset_y); 
+    Serial.print(calibData.mag_offset_z); 
 
     Serial.print("\nAccel Radius: ");
     Serial.print(calibData.accel_radius);
@@ -180,33 +204,110 @@ void displaydata()
   //displaySensorStatus();
 
   /* New line for the next sample */
-  Serial.println("");
+  Serial.print("\n");
+}
 
-  /* Wait the specified delay before requesting new data */
+double magnitudeAccel()
+{
+  double xAccelSquared = 0;
+  double yAccelSquared = 0;
+  double zAccelSquared = 0;
+  double accelSum = 0;
+  double accelRoot = 0;
+
+  sensors_event_t event;
+  bno.getEvent(&event);
+  imu::Vector<3> accelerometer = bno.getVector(Adafruit_BNO055::VECTOR_ACCELEROMETER);
+
+  xAccelSquared = (accelerometer.x())*(accelerometer.x());
+  yAccelSquared = (accelerometer.y())*(accelerometer.y());
+  zAccelSquared = (accelerometer.z())*(accelerometer.z());
+
+  accelSum = xAccelSquared + yAccelSquared + zAccelSquared;
+  accelRoot = sqrt(accelSum);
+  Serial.print("\tAcceleration Maximum: ");
+  Serial.println(accelRoot);     
+  return accelRoot;
+}
+
+double averageAccelReadings() // average all 5 entries of the accelArray
+{
+  int a = 0;
+  double averageAccelReading = 0;
+
+  for(a=0;a<5;a++)
+  {
+    averageAccelReading = averageAccelReading + accelArray[a];
+  }
+  averageAccelReading = averageAccelReading/5;
+  return averageAccelReading;
+}
+
+double averageGyroReadings() // average all 5 entries of the gyroArray
+{
+  int g = 0;
+  double averageGyroReading = 0;
+
+  for(g=0;g<5;g++)
+  {
+    averageGyroReading = averageGyroReading + gyroArray[g];
+  }
+  averageGyroReading = averageGyroReading/5;
+  return averageGyroReading;
+}
+
+double magnitudeGyro()
+{
+  double xGyroSquared = 0;
+  double yGyroSquared = 0;
+  double zGyroSquared = 0;
+  double gyroSum = 0;
+  double gyroRoot = 0;
+
+  sensors_event_t event;
+  bno.getEvent(&event);
+  imu::Vector<3> gyroscope = bno.getVector(Adafruit_BNO055::VECTOR_GYROSCOPE);
+
+  xGyroSquared = (gyroscope.x())*(gyroscope.x());
+  yGyroSquared = (gyroscope.y())*(gyroscope.y());
+  zGyroSquared = (gyroscope.z())*(gyroscope.z());
+
+  gyroSum = xGyroSquared + yGyroSquared + zGyroSquared;
+  gyroRoot = sqrt(gyroSum);
+  Serial.print("Gyroscope Maximum: ");
+  Serial.println(gyroRoot);
+  return gyroRoot;
 }
 
 void setup() // Arduino startup function
 {
   Serial.begin(9600); //baud rate
   Serial.print("Loading... \n");
-  delay(500);
+  delay(1000);
   
-  // initialize the outputs pins
+  // initialize the output pins
   pinMode(buzzerPin, OUTPUT);
   
   // initialize the input pin
-  pinMode(switchOnePin, INPUT_PULLUP);
   pinMode(interruptPin, INPUT_PULLUP);
 
-  //initialize the interrupt pin
+  // initialize the interrupt pin
   attachInterrupt(digitalPinToInterrupt(interruptPin), pin_ISR, CHANGE);
+
+  int i;
+  for (i=0;i<5;i++) // initialize arrays
+  {
+    accelArray[i] = 0;
+    gyroArray[i] = 0;
+  }
+
+  delay(500);
 
   if (!bno.begin())
     {
        Serial.print("Ooops, no BNO055 detected ... Check your wiring or I2C ADDR!");
        while (1);
     }
-
     int eeAddress = 0;
     long bnoID;
     bool foundCalib = false;
@@ -216,48 +317,38 @@ void setup() // Arduino startup function
     adafruit_bno055_offsets_t calibrationData;
     sensor_t sensor;
 
-    /*
-    *  Look for the sensor's unique ID at the beginning of EEPROM.
-    *  This isn't foolproof, but it's better than nothing.
-    */
-    bno.getSensor(&sensor);
-    if (bnoID != sensor.sensor_id)
+    bno.getSensor(&sensor); // Look for the sensor's unique ID at the beginning of EEPROM.
+    if (bnoID != sensor.sensor_id) // Must redo calibration
     {
-        Serial.println("\nNo Calibration Data for this sensor exists in EEPROM");
+        Serial.print("\nNo Calibration Data for this sensor exists in EEPROM\n");
         delay(500);
     }
-    else
+    else // Calibration data found
     {
-        Serial.println("\nFound Calibration for this sensor in EEPROM.");
+        Serial.print("\nFound Calibration for this sensor in EEPROM.\n");
         eeAddress += sizeof(long);
         EEPROM.get(eeAddress, calibrationData);
 
         displaySensorOffsets(calibrationData);
 
-        Serial.println("\n\nRestoring Calibration data to the BNO055...");
+        Serial.print("\n\nRestoring Calibration data to the BNO055...\n");
         bno.setSensorOffsets(calibrationData);
 
-        Serial.println("\n\nCalibration data loaded into BNO055");
+        Serial.print("\n\nCalibration data loaded into BNO055\n");
         foundCalib = true;
     }
-
     delay(1000);
 
-    /* Display some basic information on this sensor */
-    displaySensorDetails();
-
-    /* Optional: Display current status */
-    displaySensorStatus();
-
-   //Crystal must be configured AFTER loading calibration data into BNO055.
-    bno.setExtCrystalUse(true);
+    displaySensorDetails(); // Display some basic information on this sensor
+    displaySensorStatus(); // Display current status
+    bno.setExtCrystalUse(true); // Crystal must be configured AFTER loading calibration data into BNO055.
 
     sensors_event_t event;
     bno.getEvent(&event);
 
     if (!foundCalib)
     {
-        Serial.println("Please Calibrate Sensor: ");
+        Serial.print("Please Calibrate Sensor: \n");
         while (!bno.isFullyCalibrated())
         {
             bno.getEvent(&event);
@@ -273,51 +364,91 @@ void setup() // Arduino startup function
             displayCalStatus();
 
             /* New line for the next sample */
-            Serial.println("");
+            Serial.print("\n");
 
             /* Wait the specified delay before requesting new data */
             delay(BNO055_SAMPLERATE_DELAY_MS);
         }
     }
-
-    Serial.println("\nFully calibrated!");
-    Serial.println("--------------------------------");
-    Serial.println("Calibration Results: ");
+    Serial.print("\nFully calibrated!\n");
+    Serial.print("--------------------------------\n");
+    Serial.print("Calibration Results: \n");
     adafruit_bno055_offsets_t newCalib;
     bno.getSensorOffsets(newCalib);
     displaySensorOffsets(newCalib);
 
-    Serial.println("\n\nStoring calibration data to EEPROM...");
+    Serial.print("\n\nStoring calibration data to EEPROM...\n");
 
     eeAddress = 0;
     bno.getSensor(&sensor);
     bnoID = sensor.sensor_id;
 
     EEPROM.put(eeAddress, bnoID);
-
     eeAddress += sizeof(long);
     EEPROM.put(eeAddress, newCalib);
-    Serial.println("Data stored to EEPROM.");
+    Serial.print("Data stored to EEPROM.\n");
 
-    Serial.println("\n--------------------------------\n");
+    Serial.print("\n--------------------------------\n\n");
     delay(500);
+}
+
+void loop() 
+{
+  Serial.print("\nNode: ");
+  Serial.print(counter);
+  Serial.print("\n");
+  displaydata();
+
+  double averageAccel = 0;
+  double averageGyro = 0;
+  
+  int i;
+  for(i=4;i>0;i--) // shifts every element in array to the right by 1
+  {
+    accelArray[i] = accelArray[i-1];
+    gyroArray[i] = gyroArray[i-1];
+  }
+  // records new data into the 0th slot of the arrays
+  accelArray[0]= magnitudeAccel();
+  gyroArray[0] = magnitudeGyro();
+
+  int j;
+  Serial.print("       \t\t\t\taccel");    
+  Serial.print("  gyro\n");
+  for(j=0;j<5;j++)
+  {
+    Serial.print("       \t\t\t\t");
+    Serial.print(accelArray[j]);
+    Serial.print("\t");
+    Serial.print(gyroArray[j]);
+    Serial.print("\n");
+  }
+  
+  if (accelArray[0] > thresholdAccel) // if newest acceleration reading is greater than the threshold
+  {
+    // Calculate the average angular velocity and acceleration for 5 readings
+    averageAccel = averageAccelReadings();
+    averageGyro = averageGyroReadings(); 
+
+    if (averageAccel > thresholdAccel) // if 5 reading average > threshold then maybe falling
+    {
+      if (averageGyro > thresholdGyro) // if 5 readings of gyro > threshold then falling
+      {
+        Serial.print("User is falling\n");
+        tone(buzzerPin, TONE); // tone(pin number, frequency: Hz, duration: ms)
+        delay(500);
+      }
+      else
+      {
+        Serial.print("False positive\n");
+      }
+    }
+  }
+  delay(BNO055_SAMPLERATE_DELAY_MS);
+  counter++;
 }
 
 void pin_ISR() 
 {
-  tone(buzzerPin, 100, 2000); // tone(pin number, frequency: Hz, duration: ms)
-}
-
-  // Possible vector values can be:
-  // - VECTOR_ACCELEROMETER - m/s^2
-  // - VECTOR_MAGNETOMETER  - uT
-  // - VECTOR_GYROSCOPE     - rad/s
-  // - VECTOR_EULER         - degrees
-  // - VECTOR_LINEARACCEL   - m/s^2
-  // - VECTOR_GRAVITY       - m/s^2
-
-void loop() 
-{
-  displaydata();
-  delay(BNO055_SAMPLERATE_DELAY_MS);
+  tone(buzzerPin, TONE, 2000); // tone(pin number, frequency: Hz, duration: ms
 }
