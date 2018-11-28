@@ -1,0 +1,52 @@
+// remember to add global variables, i deleted the arrays
+// ____________ is for the threshold value
+// Can be modified into a boolean to test threshold
+// Needs to be printed out to screen for graphing
+
+void countdown ()
+{
+  if (counterG <= 10)
+  Serial.print("3");
+  if (counterG > 10 && counterG <= 20)
+  Serial.print("2");
+  if (counterG > 20 && counterG <= 30)
+  Serial.print("1");
+  if (counterG > 30 && counterG <= 40)
+  Serial.print("Ready");
+}
+
+double getGravityCalcDotProduct()
+{
+  // Read in accelerometer data
+  sensors_event_t event;
+  bno.getEvent(&event);
+  imu::Vector<3> accelerometer = bno.getVector(Adafruit_BNO055::VECTOR_ACCELEROMETER);
+
+ if (counterG < 30) // less than 3 seconds from start, get gravity
+  {
+    gravityX= accelerometer.x();
+    gravityY = accelerometer.y();
+    gravityZ = accelerometer.z();
+    
+    Serial.print(gravityX);
+    Serial.print("\n");
+    Serial.print(gravityY);
+    Serial.print("\n");
+    Serial.print(gravityZ);
+    Serial.print("\n");
+
+    return 0;
+
+  }
+  else
+  {
+    accX = accelerometer.x();
+    accY = accelerometer.y();
+    accZ = accelerometer.z();
+
+    dotProduct = accX*avgGravityX + accY*avgGravityY + accZ*avgGravityZ;
+
+    return dotProduct - __________;    
+  }
+ 
+}
