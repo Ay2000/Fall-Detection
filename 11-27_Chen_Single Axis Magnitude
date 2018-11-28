@@ -43,7 +43,7 @@ double getGravityCalcDotProduct()
     accY = accelerometer.y();
     accZ = accelerometer.z();
 
-    dotProduct = accX*avgGravityX + accY*avgGravityY + accZ*avgGravityZ;
+    dotProduct = accX*gravityX + accY*gravityY + accZ*gravityZ;
 
     return dotProduct;    
   }
