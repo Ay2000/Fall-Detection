@@ -1,6 +1,5 @@
 // remember to add global variables, i deleted the arrays
 // ____________ is for the threshold value
-// Can be modified into a boolean to test threshold
 // Needs to be printed out to screen for graphing
 
 void countdown ()
