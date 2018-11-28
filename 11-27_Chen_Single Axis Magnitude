@@ -46,7 +46,22 @@ double getGravityCalcDotProduct()
 
     dotProduct = accX*avgGravityX + accY*avgGravityY + accZ*avgGravityZ;
 
-    return dotProduct - __________;    
+    return dotProduct;    
   }
  
 }
+
+// Global
+double recieveDotProduct = 0.0
+
+void loop()
+{
+  // using function
+  recieveDotProduct = getGravityCalcDotProduct();
+  // comparison
+  if (recieveDotProduct > ____________ )
+  {
+     // integrate into testing logic
+  }
+}
+
