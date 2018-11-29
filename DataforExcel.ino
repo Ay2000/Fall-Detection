@@ -76,6 +76,11 @@ const float thresholdGyro = 100.0; //threshold for angular velocity: rad/s
 double accelArray [6]; // n+2 size or i get errors
 double gyroArray [6];
 
+//variables
+double gravityX = 0.0, gravityY = 0.0, gravityZ = 0.0;
+double accX = 0.0, accY = 0.0, accZ = 0.0, dotProduct = 0.0;
+double recieveDotProduct = 0.0;
+
 #define BNO055_SAMPLERATE_DELAY_MS (100) // Set the delay between fresh samples
 
 Adafruit_BNO055 bno = Adafruit_BNO055(55);
@@ -91,6 +96,43 @@ double magnitudeAccel(); // displays magnitude of Acceleration
 double magnitudeGyro(); // displays magnitude of angular velocity
 double averageGyroReadings(); // average all 5 entries of the gyroArray
 double averageAccelReadings(); // average all 5 entries of the accelArray
+double getGravityCalcDotProduct(); // reads gravity at start, uses it to calculate single axis magnitude
+
+double getGravityCalcDotProduct()
+{
+  // Read in accelerometer data
+  sensors_event_t event;
+  bno.getEvent(&event);
+  imu::Vector<3> accelerometer = bno.getVector(Adafruit_BNO055::VECTOR_ACCELEROMETER);
+
+ if (counter < 30) // less than 3 seconds from start, get gravity
+  {
+    gravityX= accelerometer.x();
+    gravityY = accelerometer.y();
+    gravityZ = accelerometer.z();
+    
+   /* Serial.print(gravityX);
+    Serial.print("\n");
+    Serial.print(gravityY);
+    Serial.print("\n");
+    Serial.print(gravityZ);
+    Serial.print("\n");*/
+
+    return 0;
+
+  }
+  else
+  {
+    accX = accelerometer.x();
+    accY = accelerometer.y();
+    accZ = accelerometer.z();
+
+    dotProduct = accX*gravityX + accY*gravityY + accZ*gravityZ;
+
+    return dotProduct;    
+  }
+ 
+}
 
 void displaySensorDetails(void) //display sensor information, sensor API sensor_t type (see Adafruit_Sensor for more information)
 {
@@ -412,7 +454,7 @@ void loop()
   //Serial.print(counter);
   //Serial.print("\n");
   displaydata();
-
+  recieveDotProduct = getGravityCalcDotProduct();
   double averageAccel = 0;
   double averageGyro = 0;
   
@@ -429,6 +471,8 @@ void loop()
   Serial.print(accelArray[0]);
   Serial.print("\t");
   Serial.print(gyroArray[0]/10);
+  Serial.print("\t");
+  Serial.print(recieveDotProduct);
   Serial.print("\n");
 
   int j;
