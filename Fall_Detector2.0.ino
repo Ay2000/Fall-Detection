@@ -68,6 +68,13 @@ const float lowerThresholdAccel = 8.0; //lower threshold for acceleration: m/s^2
 const float upperThresholdAccel = 20.0; //upper threshold for acceleration: m/s^2
 const float thresholdGyro = 200.0; //threshold for angular velocity: rad/s
 
+//variables
+double gravityX = 0.0, gravityY = 0.0, gravityZ = 0.0;
+double accX = 0.0, accY = 0.0, accZ = 0.0, dotProduct = 0.0;
+double recieveDotProduct = 0.0;
+bool flag1 = false;
+bool flag2 = false;
+
 #define BNO055_SAMPLERATE_DELAY_MS (100) // Set the delay between fresh samples
 
 Adafruit_BNO055 bno = Adafruit_BNO055(55);
@@ -81,6 +88,7 @@ void displaySensorOffsets(const adafruit_bno055_offsets_t &calibData); //display
 void displaydata(void); //displays 3 axis vector readings for Gyroscope and Accelerometer
 double magnitudeAccel(void); //displays magnitude of Acceleration
 double magnitudeGyro(void); //displays magnitude of angular velocity
+double getGravityCalcDotProduct(); // reads gravity at start, uses it to calculate single axis magnitude
 
 void displaySensorDetails(void) //display sensor information, sensor API sensor_t type (see Adafruit_Sensor for more information)
 {
@@ -201,6 +209,46 @@ void displaydata(void)
 
   /* New line for the next sample */
   Serial.print("\n");
+}
+
+double getGravityCalcDotProduct()
+{
+  // Read in accelerometer data
+  sensors_event_t event;
+  bno.getEvent(&event);
+  imu::Vector<3> accelerometer = bno.getVector(Adafruit_BNO055::VECTOR_ACCELEROMETER);
+
+ if (counter < 30) // less than 3 seconds from start, get gravity
+  {
+    gravityX= accelerometer.x();
+    gravityY = accelerometer.y();
+    gravityZ = accelerometer.z();
+    
+   /* Serial.print(gravityX);
+    Serial.print("\n");
+    Serial.print(gravityY);
+    Serial.print("\n");
+    Serial.print(gravityZ);
+    Serial.print("\n");*/
+
+    return 0;
+
+  }
+  else
+  {
+    accX = accelerometer.x();
+    accY = accelerometer.y();
+    accZ = accelerometer.z();
+
+    accX /= sqrt(accX * accX + accY * accY +accZ * accZ);
+    accY /= sqrt(accX * accX + accY * accY +accZ * accZ);
+    accZ /= sqrt(accX * accX + accY * accY +accZ * accZ);
+
+    dotProduct = accX*gravityX + accY*gravityY + accZ*gravityZ;
+
+    return dotProduct;    
+  }
+ 
 }
 
 double magnitudeAccel(void)
@@ -355,6 +403,8 @@ void setup(void) // Arduino startup function
 
 void loop(void) 
 {
+  //countDPStart++;
+  //countDPEnd++;
   Serial.print("\nNode: ");
   Serial.print(counter);
   Serial.print("\n");
@@ -364,15 +414,19 @@ void loop(void)
   int stateGyro = 0;
   double accelReading = 0.0;
   double gyroReading = 0.0;
+   
+  receiveDotProduct = getGravityCalcDotProduct();
 
   accelReading = magnitudeAccel();
   Serial.print("lowerThresholdAccel Check: ");   Serial.println(accelReading);
   
   if (accelReading < lowerThresholdAccel)//if newest acceleration reading is lower than the lower threshold
   {
+   //countDPStart--;
     int i;
     for(i=0;i<READINGS;i++) // Checks 10 readings of accelerometer and gyroscope to see if either of them have in any of the checks have crossed the threshold
     {
+       
       accelReading = magnitudeAccel();
       gyroReading = magnitudeGyro();
 
@@ -388,15 +442,26 @@ void loop(void)
       {
         stateGyro = 1;
       }
+      if (receiveDotProduct < 0)
+      {
+         flag1 = true;
+      }
+      /*if (i >= 6)
+      {
+         if (receiveDotProduct < 8)
+         {
+            flag2 = true;
+         }
+      }*/
       Serial.print("stateAccel: ");
       Serial.print(stateAccel); Serial.print(" ");
       Serial.print("stateGyro: ");
       Serial.println(stateGyro);
-      if ((stateAccel == 1) && (stateGyro == 1))
+      if ((stateAccel == 1) && (stateGyro == 1) && (flag1 == true))
       {
-        Serial.println("User is falling!\n");
-        tone(buzzerPin, TONE); // plays a tone forever
-        delay(500);
+         Serial.println("User is falling!\n");
+           tone(buzzerPin, TONE); // plays a tone forever
+           delay(500);
       }
       else
       {
